@@ -60,9 +60,15 @@ def main():
     ap.add_argument("video")
     ap.add_argument("--out", default=None)
     ap.add_argument("--scene", type=float, default=0.06)
-    ap.add_argument("--static", type=float, default=4.0, help="静态段告警阈值（秒）")
+    ap.add_argument("--static", type=float, default=None, help="静态段告警阈值（秒），默认按 profile")
+    ap.add_argument("--profile", choices=["bright", "cinematic"], default="bright",
+                    help="bright：默认高网感快节奏；cinematic：暗调文案风等慢节奏电影感主题")
     ap.add_argument("--exempt", default="", help="豁免区间（秒），如 23-28.5,54.7-60.8：示意图/演示定格段不计入静态段")
     a = ap.parse_args()
+    P = {"bright": dict(static=4.0, avg=3.5, longest=6.0, ratio=0.15, hook=2),
+         "cinematic": dict(static=6.0, avg=4.5, longest=12.0, ratio=0.40, hook=1)}[a.profile]
+    if a.static is None:
+        a.static = P["static"]
     out = a.out or os.path.splitext(a.video)[0] + "_qa"
     os.makedirs(out, exist_ok=True)
 
@@ -94,15 +100,15 @@ def main():
 
     lufs = loud["integrated_lufs"]
     verdict = {
-        "avg_visual_gap<=3.5s": v(avg_gap <= 3.5, f"平均 {avg_gap}s 才有一次画面变化"),
-        f"longest_static<={a.static + 2:.0f}s": v(longest <= a.static + 2, f"最长静态段 {longest}s"),
-        "static_ratio<=15%": v(static_ratio <= 0.15, f"{static_ratio*100:.0f}% 时长处于>{a.static}s 的静态段"),
-        "hook_events>=2_in_3s": v(hook_events >= 2, f"前 3 秒只有 {hook_events} 次画面变化"),
+        f"avg_visual_gap<={P['avg']}s": v(avg_gap <= P["avg"], f"平均 {avg_gap}s 才有一次画面变化"),
+        f"longest_static<={P['longest']:.0f}s": v(longest <= P["longest"], f"最长静态段 {longest}s"),
+        f"static_ratio<={P['ratio']*100:.0f}%": v(static_ratio <= P["ratio"], f"{static_ratio*100:.0f}% 时长处于>{a.static}s 的静态段"),
+        f"hook_events>={P['hook']}_in_3s": v(hook_events >= P["hook"], f"前 3 秒只有 {hook_events} 次画面变化"),
         "loudness_-16..-13LUFS": v(lufs is not None and -16.5 <= lufs <= -12.5, f"整体响度 {lufs} LUFS"),
         "true_peak<=-1dBTP": v(loud["true_peak_dbfs"] is not None and loud["true_peak_dbfs"] <= -1.0,
                                f"真峰值 {loud['true_peak_dbfs']} dBTP"),
     }
-    report = {"video": a.video, "exempt": exempt, "duration": round(dur, 2), "visual_events": ev,
+    report = {"video": a.video, "profile": a.profile, "exempt": exempt, "duration": round(dur, 2), "visual_events": ev,
               "events_per_min": per_min, "avg_gap": avg_gap, "longest_static": longest,
               "static_spans": spans, "static_ratio": static_ratio, "hook_events_0_3s": hook_events,
               "loudness": loud, "verdict": verdict}

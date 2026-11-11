@@ -30,6 +30,15 @@
 
 完整过程见 [实测案例](skills/chatcut-editing-sop/references/case-brow-glabella.md)。
 
+## 两个主题
+
+| 主题 | 适合 | 风格 |
+| --- | --- | --- |
+| 明快风（默认） | 知识科普、美妆、教程、种草 | 提速、跳推、金黄双层花字、音效卡点、2–4 秒一个画面变化 |
+| 暗调文案风 | 观点、商业认知、创业、个人 IP、文案金句 | 黑底暗光、宋体 + 手写体、红金点睛、1.0× 慢节奏留白、黑场字卡、圆形聚光、深度闪避的钢琴 BGM |
+
+每个主题都规定了封面、字体（全部是 ChatCut 可渲染字体）、字幕位置、配色、调色参数、配音、节奏、转场、音乐和 QA 标准。暗调文案风还写了亮背景素材怎么用人像遮罩换成黑底（实测有效）。详见 [theme-dark-copywriter.md](skills/chatcut-editing-sop/references/theme-dark-copywriter.md)。
+
 ## 工作流
 
 ```
@@ -77,7 +86,7 @@ python3 skills/chatcut-editing-sop/scripts/retention_qa.py 成片.mp4 --out qa_r
   --exempt 23.0-28.7,54.6-61.1   # 可选：示意图/演示定格段不计入静态段
 ```
 
-输出平均画面变化间隔、最长静态段、静态占比、前 3 秒变化、响度和真峰值，以及一张联系表。
+输出平均画面变化间隔、最长静态段、静态占比、前 3 秒变化、响度和真峰值，以及一张联系表。暗调文案风等慢节奏主题加 `--profile cinematic`（平均 ≤ 4.5 秒、最长静态 ≤ 12 秒、超过 6 秒的静态段占比 ≤ 40%）。
 
 ## 实测踩过的坑（已写进 Skill）
 
@@ -97,6 +106,7 @@ skills/chatcut-editing-sop/
 │   ├── retention-playbook.md     # Hook、视觉节拍、花字、动画音效对照
 │   ├── chatcut-execution.md      # ChatCut 工具用法与实测踩坑
 │   ├── design-style.md           # 视觉规范与版式
+│   ├── theme-dark-copywriter.md  # 主题：暗调文案风
 │   ├── niche-beauty-health.md    # 美妆/医美/健康垂类规则
 │   ├── prompts.md                # 只有文稿时的分轮提示词
 │   └── case-brow-glabella.md     # 完整实测案例

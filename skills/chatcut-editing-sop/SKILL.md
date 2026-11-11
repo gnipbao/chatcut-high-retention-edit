@@ -1,6 +1,6 @@
 ---
 name: chatcut-editing-sop
-description: 在 ChatCut（Desktop 或 Web 插件）里把竖屏口播、知识解说、美妆/医美科普、教程类素材剪成高网感、高完播的成片，或为这类视频生成分轮剪辑指令。流程是：节奏蓝图 → 语音粗剪锁轴（冷开场 Hook）→ 字幕与双层花字 → 视觉节奏层（推拉镜头、章节卡、画中画、抠像破框、示意图、B-roll）→ 音效混音 → 留存 QA 量化验收。用户说“用 ChatCut 剪口播”“剪得有网感/高级一点”“提高完播率”“按那个教程风格剪”“给口播加包装/花字/音效”“出四轮剪辑提示词”，或要在 ChatCut 项目里精剪口播时使用。
+description: 在 ChatCut（Desktop 或 Web 插件）里把竖屏口播、知识解说、美妆/医美科普、教程类、观点文案类素材剪成高网感、高完播的成片（内置“明快风”和“暗调文案风”两个主题，含封面、字体、字幕、配音、节奏、转场规范），或为这类视频生成分轮剪辑指令。流程是：节奏蓝图 → 语音粗剪锁轴（冷开场 Hook）→ 字幕与双层花字 → 视觉节奏层（推拉镜头、章节卡、画中画、抠像破框、示意图、B-roll）→ 音效混音 → 留存 QA 量化验收。用户说“用 ChatCut 剪口播”“剪得有网感/高级一点”“提高完播率”“按那个教程风格剪”“给口播加包装/花字/音效”“出四轮剪辑提示词”，或要在 ChatCut 项目里精剪口播时使用。
 metadata:
   version: '2.0.0'
 ---
@@ -17,6 +17,17 @@ metadata:
 
 - ChatCut Desktop：先读其自带的 `talking-head-guide`（语音剪辑原则、MG/B-roll/音乐/字幕细则），本 Skill 只补“网感与留存”层，不重复它的规则；冲突时以工具实时契约为准。MG 走 `create-motion-graphics`，转场/蒙版/特效走 `pixel-processing-gen`，字幕走 `transcription`。
 - 具体工具用法读 [ChatCut 执行与验收](references/chatcut-execution.md)；节奏与 Hook 读 [留存节奏手册](references/retention-playbook.md)；视觉规范读 [设计风格与版式](references/design-style.md)；美妆/医美/健康类读 [垂类规则](references/niche-beauty-health.md)；只出指令时读 [四轮提示词规范](references/prompts.md)；一个完整跑通的样例见 [实测案例](references/case-brow-glabella.md)。
+
+## 选择主题
+
+开剪前先定主题，主题决定字体、配色、语速、转场、音乐和 QA 标准；下面各轮的默认值都是“明快风”，选了其他主题时，以主题文件为准覆盖。
+
+| 主题 | 适合 | 关键词 | 文件 |
+| --- | --- | --- | --- |
+| 明快风（默认） | 知识科普、美妆、教程、种草 | 提速、跳推、金黄双层花字、音效卡点 | 本文件 + [设计风格](references/design-style.md) |
+| 暗调文案风 | 观点、商业认知、创业、个人 IP、文案金句 | 黑底暗光、宋体 + 手写体、红金点睛、慢节奏留白、黑场字卡 | [theme-dark-copywriter.md](references/theme-dark-copywriter.md) |
+
+用户说“舒老师那种”“暗调”“文案风”“高级感、电影感、黑底大字”“观点类口播”，或素材本身是暗光人像，就用暗调文案风。没说时按内容判断，拿不准就给两个主题各一张示意帧让用户选。
 
 ## 判断交付方式
 
@@ -88,7 +99,7 @@ metadata:
 ## 第 5 轮 · 留存 QA 与交付
 
 1. 导出 1080p 预览（`export`，`track_progress target=export wait`）。
-2. 运行 `python3 scripts/retention_qa.py <导出文件> --out <目录> --exempt 23.0-28.7,54.6-61.1`（路径相对本 Skill 目录；`--exempt` 填示意图/演示定格段的秒数区间），对照目标：
+2. 运行 `python3 scripts/retention_qa.py <导出文件> --out <目录> --exempt 23.0-28.7,54.6-61.1`（路径相对本 Skill 目录；`--exempt` 填示意图/演示定格段的秒数区间；暗调文案风加 `--profile cinematic`，标准见主题文件），明快风对照目标：
 
 | 指标 | 目标 |
 | --- | --- |
