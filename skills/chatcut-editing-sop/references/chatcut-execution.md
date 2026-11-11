@@ -76,6 +76,8 @@ ffmpeg -i 原片.mp4 -an -c:v copy 原片-画中画无音轨.mp4   # 只复制�
 - 口播片段之间的接缝：`smooth_audio trackIds=[口播轨] crossfadeDurationFrames=2`。
 - 总线限幅：`{"type":"audio-effect","assetId":"builtin:audio-effect-limiter","target":"master","propertyOverrides":{"ceilingDb":-1.5}}`。它限的是采样峰值，真峰值会比 ceiling 高约 0.5 dB，所以 ceiling 取 −1.5 才能让真峰值 ≤ −1 dBTP（实测：不加时真峰值 +0.1 dBTP，加上后为 −1.3）。
 - 放在条目局部范围内的效果，`edit_item` 返回的 `startFrame` 是**相对条目起点**的帧；传入时用时间轴帧即可。
+- `split_item` 会把遮罩效果一起切开，但切出来的效果带了局部范围，再用 `updates` 改 `mask` 会报 “Mask requires targetItemId for one complete … clip”。要给切出的片段换遮罩（如人像遮罩改圆形聚光），先 `deletes` 旧效果，再 `adds` 一个 `targetItemId` 指向新片段的遮罩。
+- 切分片段或改字幕分页后，字幕 Card ID 会变；之前用 `set_card_style` 隐藏的卡样式会保留，但后续编辑要重新 `read_captions` 取 ID（用 `fromFrame/toFrame` 小范围读，整轨读一次输出很大）。
 
 ## 第 5 轮 · 导出与 QA
 

@@ -27,15 +27,28 @@ def duration(path):
     return float(r.stdout.strip())
 
 
-def scene_events(path, thr):
-    r = run(["ffmpeg", "-hide_banner", "-i", path, "-an", "-vf",
-             f"scale=270:-2,select='gt(scene,{thr})',showinfo", "-f", "null", "-"])
-    times = [float(m) for m in re.findall(r"pts_time:([0-9.]+)", r.stderr)]
+def _scene_times(path, vf):
+    r = run(["ffmpeg", "-hide_banner", "-i", path, "-an", "-vf", vf + ",showinfo", "-f", "null", "-"])
+    return [float(m) for m in re.findall(r"pts_time:([0-9.]+)", r.stderr)]
+
+
+def _merge(times, win):
     merged = []
-    for t in times:  # 0.4s 内的连续触发算一次事件（转场动画会连触多帧）
-        if not merged or t - merged[-1] > 0.4:
+    for t in sorted(times):  # win 秒内的连续触发算一次事件（转场动画会连触多帧）
+        if not merged or t - merged[-1] > win:
             merged.append(round(t, 2))
     return merged
+
+
+def scene_events(path, thr, fade_thr=0.10):
+    """硬切按原帧率检测；淡入淡出、黑场字卡这类渐变转场逐帧变化小，
+    再按每秒 5 帧抽样检测一次（相邻样本相隔 0.2 秒），两路合并。fade_thr<=0 关闭第二路。"""
+    cuts = _merge(_scene_times(path, f"scale=270:-2,select='gt(scene,{thr})'"), 0.4)
+    if fade_thr <= 0:
+        return cuts
+    fades = _merge(_scene_times(path, f"fps=5,scale=270:-2,select='gt(scene,{fade_thr})'"), 0.6)
+    extra = [t for t in fades if all(abs(t - c) > 0.6 for c in cuts)]
+    return _merge(cuts + extra, 0.4)
 
 
 def loudness(path):
@@ -60,6 +73,8 @@ def main():
     ap.add_argument("video")
     ap.add_argument("--out", default=None)
     ap.add_argument("--scene", type=float, default=0.06)
+    ap.add_argument("--fade-scene", type=float, default=0.10,
+                    help="渐变转场（淡入淡出、黑场字卡）检测阈值，按 5fps 抽样；0 关闭")
     ap.add_argument("--static", type=float, default=None, help="静态段告警阈值（秒），默认按 profile")
     ap.add_argument("--profile", choices=["bright", "cinematic"], default="bright",
                     help="bright：默认高网感快节奏；cinematic：暗调文案风等慢节奏电影感主题")
@@ -73,7 +88,7 @@ def main():
     os.makedirs(out, exist_ok=True)
 
     dur = duration(a.video)
-    ev = scene_events(a.video, a.scene)
+    ev = scene_events(a.video, a.scene, a.fade_scene)
     pts = [0.0] + ev + [dur]
     gaps = [round(pts[i + 1] - pts[i], 2) for i in range(len(pts) - 1)]
     exempt = []
