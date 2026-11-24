@@ -2,7 +2,7 @@
 
 把一条口播原片，用 [ChatCut](https://chatcut.io) 剪成**开头抓人、画面一直在变、字幕干净、能继续改**的竖屏短视频。
 
-这是一个给 AI 剪辑 Agent（Claude Code、Codex、Grok Bot 等能加载 Skill 的助手）用的工作流 Skill，Agent 会照着它在 ChatCut 时间线上分轮完成剪辑，最后用脚本给成片做一次“留存节奏体检”。
+这是一个给 AI 剪辑 Agent（**Gemini CLI、Google Antigravity**、Claude Code、Codex、Grok Bot 等支持 Agent Skills 的助手）用的工作流 Skill，Agent 会照着它在 ChatCut 时间线上分轮完成剪辑，最后用脚本给成片做一次“留存节奏体检”。
 
 ## 它解决什么问题
 
@@ -30,14 +30,15 @@
 
 完整过程见 [实测案例](skills/chatcut-editing-sop/references/case-brow-glabella.md)。
 
-## 两个主题
+## 三个主题
 
 | 主题 | 适合 | 风格 |
 | --- | --- | --- |
 | 明快风（默认） | 知识科普、美妆、教程、种草 | 提速、跳推、金黄双层花字、音效卡点、2–4 秒一个画面变化 |
 | 暗调文案风 | 观点、商业认知、创业、个人 IP、文案金句 | 真实场景压暗的低调光、宋体 + 手写体、红金点睛、1.0× 慢节奏留白；纯黑只用于黑场字卡、居中圆形聚光等插入镜头 |
+| 贴纸抠像风 | AI / 产品 / 设计方法论、创作者分享、双语干货、清单教程 | 稳定粗白边人像抠像、淡彩方格纸按章节换底、全息珠光模切贴纸、人物居中↔左偏平滑平移、默认无底部滚动字幕、极简克制音效 |
 
-每个主题都规定了封面、字体（全部是 ChatCut 可渲染字体）、字幕位置、配色、调色参数、配音、节奏、转场、音乐和 QA 标准。暗调文案风还写了亮背景素材怎么用调色 + 半透明暗角做成低调光（实测有效）。详见 [theme-dark-copywriter.md](skills/chatcut-editing-sop/references/theme-dark-copywriter.md)。
+每个主题都规定了画幅、封面、字体（全部是 ChatCut 可渲染字体）、字幕策略、配色、抠像/调色参数、节奏、转场、声音和 QA 标准。暗调文案风详见 [theme-dark-copywriter.md](skills/chatcut-editing-sop/references/theme-dark-copywriter.md)，贴纸抠像风详见 [theme-sticker-collage.md](skills/chatcut-editing-sop/references/theme-sticker-collage.md)。
 
 ## 工作流
 
@@ -56,16 +57,27 @@
 
 ## 安装
 
-把 `skills/chatcut-editing-sop` 整个文件夹放到你的 Agent 读取 Skill 的目录：
+把 `skills/chatcut-editing-sop` 整个文件夹放到你的 Agent 读取 Skill 的目录，或直接通过 Gemini CLI 扩展安装：
 
 ```bash
+# Google Antigravity（全局 / 项目级二选一）
+cp -R skills/chatcut-editing-sop ~/.gemini/config/skills/
+# 或放到项目根目录 .agents/skills/chatcut-editing-sop/
+
+# Gemini CLI（方式一：直接作为 Extension 安装，自动发现 skills/）
+gemini extensions install https://github.com/gnipbao/chatcut-high-retention-edit
+
+# Gemini CLI（方式二：手动复制到 Skills 目录）
+cp -R skills/chatcut-editing-sop ~/.gemini/skills/
+# 或放到项目根目录 .gemini/skills/chatcut-editing-sop/
+
 # Claude Code
 cp -R skills/chatcut-editing-sop ~/.claude/skills/
 
-# 其他支持 SKILL.md 的 Agent：放进它的 skills 目录即可
+# 其他支持 Agent Skills (SKILL.md) 的 Agent：放进它的 skills 目录即可
 ```
 
-Agent 需要已经连上 ChatCut（Desktop MCP，或 Web / Grok Bot 插件）。
+Agent 需要已经连上 ChatCut（Desktop MCP，或 Web / Grok Bot 插件）。在 Antigravity / Gemini 环境下已兼容 `chatcut-*` 前缀的配套 Skill 与懒加载 `chatcut_desktop` MCP 调用。
 
 ## 使用
 
@@ -86,7 +98,10 @@ python3 skills/chatcut-editing-sop/scripts/retention_qa.py 成片.mp4 --out qa_r
   --exempt 23.0-28.7,54.6-61.1   # 可选：示意图/演示定格段不计入静态段
 ```
 
-输出平均画面变化间隔、最长静态段、静态占比、前 3 秒变化、响度和真峰值，以及一张联系表。暗调文案风等慢节奏主题加 `--profile cinematic`（平均 ≤ 4.5 秒、最长静态 ≤ 12 秒、超过 6 秒的静态段占比 ≤ 40%）。
+输出平均画面变化间隔、最长静态段、静态占比、前 3 秒变化、响度和真峰值，以及一张联系表。
+- 明快风（默认）：`--profile bright`（平均 ≤ 3.5 秒、最长静态 ≤ 6 秒、> 4 秒静态占比 ≤ 15%、前 3 秒 ≥ 2 次变化）
+- 暗调文案风：`--profile cinematic`（平均 ≤ 4.5 秒、最长静态 ≤ 12 秒、> 6 秒静态占比 ≤ 40%、前 3 秒 ≥ 1 次变化）
+- 贴纸抠像风：`--profile sticker`（自动切换贴纸微节拍检测阈值，平均 ≤ 3.5 秒、最长静态 ≤ 9 秒、> 5 秒静态占比 ≤ 25%、前 3 秒 ≥ 1 次变化）
 
 ## 实测踩过的坑（已写进 Skill）
 
@@ -100,18 +115,21 @@ python3 skills/chatcut-editing-sop/scripts/retention_qa.py 成片.mp4 --out qa_r
 ## 目录
 
 ```
-skills/chatcut-editing-sop/
-├── SKILL.md                      # 主流程
-├── references/
-│   ├── retention-playbook.md     # Hook、视觉节拍、花字、动画音效对照
-│   ├── chatcut-execution.md      # ChatCut 工具用法与实测踩坑
-│   ├── design-style.md           # 视觉规范与版式
-│   ├── theme-dark-copywriter.md  # 主题：暗调文案风
-│   ├── niche-beauty-health.md    # 美妆/医美/健康垂类规则
-│   ├── prompts.md                # 只有文稿时的分轮提示词
-│   └── case-brow-glabella.md     # 完整实测案例
-└── scripts/
-    └── retention_qa.py           # 留存节奏量化体检
+.
+├── gemini-extension.json             # Gemini CLI Extension 清单（自动发现 skills/）
+└── skills/chatcut-editing-sop/
+    ├── SKILL.md                      # 主流程（兼容 Gemini / Antigravity / Claude / Codex）
+    ├── references/
+    │   ├── retention-playbook.md     # Hook、视觉节拍、花字、动画音效对照
+    │   ├── chatcut-execution.md      # ChatCut 工具用法、Gemini 适配与实测踩坑
+    │   ├── design-style.md           # 主题 1：明快风视觉规范与版式
+    │   ├── theme-dark-copywriter.md  # 主题 2：暗调文案风
+    │   ├── theme-sticker-collage.md  # 主题 3：贴纸抠像风
+    │   ├── niche-beauty-health.md    # 美妆/医美/健康垂类规则
+    │   ├── prompts.md                # 只有文稿时的分轮提示词（含三主题附加指令）
+    │   └── case-brow-glabella.md     # 完整实测案例
+    └── scripts/
+        └── retention_qa.py           # 留存节奏量化体检（bright / cinematic / sticker）
 ```
 
 ## License

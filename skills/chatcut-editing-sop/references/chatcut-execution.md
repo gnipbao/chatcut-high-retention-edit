@@ -2,6 +2,13 @@
 
 工具名以当前连接的实时定义为准。Desktop 时间轴用成片帧（`startFrame`、`durationFrames`），素材偏移是整数微秒（`sourceIn`）；Web 常用 `fromFrame`、`durationInFrames`、秒单位的源偏移。条目、资产、轨道 ID 一律从工具结果取。
 
+## Gemini / Antigravity 与多宿主兼容要点
+
+- **懒加载 MCP 工具**：在 Google Antigravity 或支持按需加载 MCP 的 Gemini 宿主中，ChatCut Desktop 通常挂载在 `chatcut_desktop` MCP Server 下。调用前先读对应工具的 schema JSON，再通过 `call_mcp_tool` 执行；如已直接注册为原生工具（如 Gemini CLI / Claude Code）则直接调用。
+- **配套 Skill 名称**：ChatCut Desktop 新版同步的 Skill 带 `chatcut-` 前缀（`chatcut-talking-head-guide`、`chatcut-create-motion-graphics`、`chatcut-create-pixel-processor`、`chatcut-transcription`）；Hosted 插件或旧版不带前缀，按宿主实际已安装列表匹配。
+- **脚本路径**：运行 `retention_qa.py` 时基于本 Skill 安装目录解析绝对路径（例如 `~/.gemini/config/skills/chatcut-editing-sop/scripts/retention_qa.py` 或 `~/.gemini/skills/chatcut-editing-sop/scripts/retention_qa.py`），避免受当前工作目录影响。
+- **多模态自检**：Gemini / Antigravity 支持直接读取图像与音频文件，验收时可直接读取 `contact_sheet.jpg`、字幕区拼接图和导出音频做视觉与听觉双核验。
+
 ## 选择连接与项目
 
 - 沿用用户指定的连接。Desktop：`get_active_project`；没有或不确定时 `list_projects` → `target_project` → `read_project`。Web/Codex 插件先读 `chatcut-plugin-basics`。
@@ -63,7 +70,7 @@ ffmpeg -i 原片.mp4 -an -c:v copy 原片-画中画无音轨.mp4   # 只复制�
 
 然后 `push_asset` 注册，画中画都用这个资产。放好画中画后用 `read_captions` 检查 `tracks` 只有口播这一条；如果已经出现第二条，删除画中画也清不掉残留卡，只能新建时间轴重新搭。
 
-**抠像破框 / 文字在人物后**：复制口播片段到上层轨，加 `{"type":"pixel-effect","assetId":"builtin:effect-ai-portrait-matte","targetItemId":"<复制层>"}`；大字 MG 放在原口播层与抠像层之间。首次使用会下载模型并生成蒙版缓存，先在短段验证头发和手的边缘。不稳定时退回圆形/圆角窗。
+**抠像破框 / 贴纸白边抠像 / 文字在人物后**：新版 ChatCut Desktop 支持内联人像遮罩，在 `edit_item` `updates` 中对口播片段写入 `{"mask":{"nodes":[{"kind":"portrait"}]}}`（旧版 Desktop 按 `browse_library` 结果使用 `{"type":"pixel-effect","assetId":"builtin:effect-ai-portrait-matte","targetItemId":"<复制层>"}`）。大字/背后连线 MG 放在背景层与抠像人物层之间。贴纸抠像风需要平滑不闪烁的粗白描边，走 `chatcut-create-pixel-processor` 自定义 Pixel Effect 对抠像 Alpha 做平滑外扩。首次使用人像抠像会准备模型并生成缓存，先在 3 秒动态短段验证头发、肩部和手的边缘稳定性，不稳定时退回圆形/圆角窗。
 
 **B-roll**：优先项目内素材；需要外部素材用 `search_stock_media` → 下载 → `push_asset`。竖屏用 `fit:"cover"` 前先比较长宽比（见 talking-head-guide 的 b-roll 规则）。补镜静音。
 

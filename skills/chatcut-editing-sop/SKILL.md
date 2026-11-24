@@ -1,33 +1,41 @@
 ---
 name: chatcut-editing-sop
-description: 在 ChatCut（Desktop 或 Web 插件）里把竖屏口播、知识解说、美妆/医美科普、教程类、观点文案类素材剪成高网感、高完播的成片（内置“明快风”和“暗调文案风”两个主题，含封面、字体、字幕、配音、节奏、转场规范），或为这类视频生成分轮剪辑指令。流程是：节奏蓝图 → 语音粗剪锁轴（冷开场 Hook）→ 字幕与双层花字 → 视觉节奏层（推拉镜头、章节卡、画中画、抠像破框、示意图、B-roll）→ 音效混音 → 留存 QA 量化验收。用户说“用 ChatCut 剪口播”“剪得有网感/高级一点”“提高完播率”“按那个教程风格剪”“给口播加包装/花字/音效”“出四轮剪辑提示词”，或要在 ChatCut 项目里精剪口播时使用。
+description: 在 ChatCut（Desktop 或 Web 插件）里把口播、知识解说、美妆/医美科普、教程类、观点文案类、AI/产品方法论类素材剪成高网感、高完播的成片（内置“明快风”“暗调文案风”“贴纸抠像风”三个主题，含封面、字体、字幕、抠像/方格纸、配音、节奏、转场与量化 QA 规范），或为这类视频生成分轮剪辑指令。兼容 Gemini CLI、Google Antigravity、Claude Code、Codex 等支持 Agent Skills 的宿主。流程是：节奏蓝图 → 语音粗剪锁轴 → 字幕/贴纸与花字 → 视觉节奏层 → 音效混音 → 留存 QA 量化验收。用户说“用 ChatCut 剪口播”“剪得有网感/高级一点”“提高完播率”“按那个教程/贴纸/舒老师风格剪”“给口播加包装/花字/贴纸/音效”“出四轮剪辑提示词”，或要在 ChatCut 项目里精剪口播时使用。
 metadata:
-  version: '2.0.0'
+  version: '2.1.0'
 ---
 
-# ChatCut 高网感口播剪辑 SOP（v2）
+# ChatCut 高网感口播剪辑 SOP（v2.1）
 
-口播是听觉主轴，画面每一次变化都要帮观众“继续看下去”或“看懂正在说的东西”。v2 在原四轮包装之上补了两件事：**开剪前先画节奏蓝图**，**交付前用数据验收留存节奏**。
+口播是听觉主轴，画面每一次变化都要帮观众“继续看下去”或“看懂正在说的东西”。流程在四轮包装之上补了两件事：**开剪前先画节奏蓝图**，**交付前用数据验收留存节奏**。
 
 ```
-0 节奏蓝图 → 1 粗剪锁轴 → 2 字幕与花字 → 3 视觉节奏层 → 4 音效混音 → 5 留存 QA 与交付
+0 节奏蓝图 → 1 粗剪锁轴 → 2 字幕与花字/贴纸 → 3 视觉节奏层 → 4 音效混音 → 5 留存 QA 与交付
 ```
 
-## 必读与分工
+## 必读、分工与跨宿主（Gemini / Antigravity / Claude）兼容
 
-- ChatCut Desktop：先读其自带的 `talking-head-guide`（语音剪辑原则、MG/B-roll/音乐/字幕细则），本 Skill 只补“网感与留存”层，不重复它的规则；冲突时以工具实时契约为准。MG 走 `create-motion-graphics`，转场/蒙版/特效走 `pixel-processing-gen`，字幕走 `transcription`。
-- 具体工具用法读 [ChatCut 执行与验收](references/chatcut-execution.md)；节奏与 Hook 读 [留存节奏手册](references/retention-playbook.md)；视觉规范读 [设计风格与版式](references/design-style.md)；美妆/医美/健康类读 [垂类规则](references/niche-beauty-health.md)；只出指令时读 [四轮提示词规范](references/prompts.md)；一个完整跑通的样例见 [实测案例](references/case-brow-glabella.md)。
+- **ChatCut 配套 Skill 命名兼容**：ChatCut Desktop（含 Antigravity / Gemini 环境）自带的配套 Skill 通常带 `chatcut-` 前缀，Hosted 插件或旧版可能不带前缀。按当前宿主已加载名称读取对应 Skill（不重复它们的细则，冲突时以工具实时契约为准）：
+  - 口播基础：`chatcut-talking-head-guide` 或 `talking-head-guide`
+  - 动效与字卡 MG：`chatcut-create-motion-graphics` 或 `create-motion-graphics`
+  - 像素特效 / 抠像 / 蒙版 / 转场：`chatcut-create-pixel-processor` 或 `pixel-processing-gen`
+  - 字幕与转写：`chatcut-transcription` 或 `transcription`
+- **懒加载 MCP 工具（Gemini / Antigravity）**：当 ChatCut MCP（如 `chatcut_desktop`）以懒加载方式挂载时，先读取对应工具 schema 再通过 MCP 调用工具执行；若工具直接暴露为原生工具则直接调用。不要硬编码未经工具契约确认的参数名。
+- **路径解析**：本 Skill 文档内的相对路径（如 `./references/...`、`./scripts/retention_qa.py`）均以本 `SKILL.md` 所在目录 `<skill-dir>` 为基准，执行脚本时使用绝对路径或解析后的 `<skill-dir>/scripts/retention_qa.py`，不假设当前工作目录在 Skill 目录内。
+- **多模态自检**：具备原生图像/音频读取能力的宿主（如 Gemini / Antigravity）在每轮预览和第 5 轮验收时，直接查看预览帧、联系表（`contact_sheet.jpg`）与字幕裁剪大图做复核。
+- **参考文档**：工具执行读 [ChatCut 执行与验收](./references/chatcut-execution.md)；节奏与 Hook 读 [留存节奏手册](./references/retention-playbook.md)；明快风视觉读 [设计风格与版式](./references/design-style.md)；美妆/医美/健康类读 [垂类规则](./references/niche-beauty-health.md)；只出指令时读 [四轮提示词规范](./references/prompts.md)；实测样例见 [实测案例](./references/case-brow-glabella.md)。
 
 ## 选择主题
 
-开剪前先定主题，主题决定字体、配色、语速、转场、音乐和 QA 标准；下面各轮的默认值都是“明快风”，选了其他主题时，以主题文件为准覆盖。
+开剪前先定主题，主题决定画幅、背景处理、字体、配色、语速、转场、音乐和 QA 标准；下面各轮的默认值都是“明快风”，选了其他主题时，以对应主题文件为准覆盖。
 
 | 主题 | 适合 | 关键词 | 文件 |
 | --- | --- | --- | --- |
-| 明快风（默认） | 知识科普、美妆、教程、种草 | 提速、跳推、金黄双层花字、音效卡点 | 本文件 + [设计风格](references/design-style.md) |
-| 暗调文案风 | 观点、商业认知、创业、个人 IP、文案金句 | 黑底暗光、宋体 + 手写体、红金点睛、慢节奏留白、黑场字卡 | [theme-dark-copywriter.md](references/theme-dark-copywriter.md) |
+| 明快风（默认） | 知识科普、美妆、教程、种草 | 提速、跳推、金黄双层花字、音效卡点 | 本文件 + [设计风格](./references/design-style.md) |
+| 暗调文案风 | 观点、商业认知、创业、个人 IP、文案金句 | 真实场景压暗低调光、宋体 + 手写体、红金点睛、慢节奏留白、黑场字卡 | [theme-dark-copywriter.md](./references/theme-dark-copywriter.md) |
+| 贴纸抠像风 | AI/产品/设计方法论、创作者干货、双语分享、清单教程 | 粗白边稳定人像抠像、淡彩方格纸章节换底、全息珠光模切贴纸、居中↔左偏平移、无底部滚动字幕、克制音效 | [theme-sticker-collage.md](./references/theme-sticker-collage.md) |
 
-用户说“舒老师那种”“暗调”“文案风”“高级感、电影感、黑底大字”“观点类口播”，或素材本身是暗光人像，就用暗调文案风。没说时按内容判断，拿不准就给两个主题各一张示意帧让用户选。
+用户说“舒老师那种”“暗调”“文案风”“高级感、电影感、黑底大字”“观点类口播”，或素材本身是暗光人像，就用**暗调文案风**。用户说“贴纸风”“手账风”“白边抠像”“方格纸换背景”“彩虹贴纸”“设计感/AI 分享/对标新风格”，或希望替换杂乱实拍背景并做成轻盈贴纸拼贴感，就用**贴纸抠像风**。没说时按内容判断，拿不准就给候选主题各一张示意方案让用户选。
 
 ## 判断交付方式
 
@@ -99,7 +107,7 @@ metadata:
 ## 第 5 轮 · 留存 QA 与交付
 
 1. 导出 1080p 预览（`export`，`track_progress target=export wait`）。
-2. 运行 `python3 scripts/retention_qa.py <导出文件> --out <目录> --exempt 23.0-28.7,54.6-61.1`（路径相对本 Skill 目录；`--exempt` 填示意图/演示定格段的秒数区间；暗调文案风加 `--profile cinematic`，标准见主题文件），明快风对照目标：
+2. 运行 `python3 <skill-dir>/scripts/retention_qa.py <导出文件> --out <目录> --exempt 23.0-28.7,54.6-61.1`（`<skill-dir>` 为本 `SKILL.md` 所在目录；`--exempt` 填示意图/演示定格段的秒数区间；暗调文案风加 `--profile cinematic`，贴纸抠像风加 `--profile sticker`，标准见各主题文件），明快风对照目标：
 
 | 指标 | 目标 |
 | --- | --- |
@@ -109,5 +117,5 @@ metadata:
 | 前 3 秒视觉变化 | ≥2 次 |
 | 整体响度 | −16 至 −13 LUFS，真峰值 ≤ −1 dBTP |
 
-3. 有 WARN 就回第 3/4 轮补节拍或调电平，再导出复检。脚本量化构图级变化：硬切、推拉跳变按原帧率检测，淡入淡出、黑场字卡这类渐变转场再按每秒 5 帧抽样检测一次（`--fade-scene`，默认 0.10）；慢推和小花字不计入，所以 PASS 后仍要看联系表人工确认。
+3. 有 WARN 就回第 3/4 轮补节拍或调电平，再导出复检。脚本量化画面变化：硬切、推拉跳变按原帧率检测，淡入淡出、黑场字卡或贴纸弹出这类局部/渐变变化再按每秒 5 帧抽样检测一次（`--fade-scene`，`bright/cinematic` 默认 0.10，`sticker` 默认 0.016）；慢推不计入，所以 PASS 后仍要看联系表人工确认（Gemini / Antigravity 可直接读取 `contact_sheet.jpg` 逐格巡检）。
 4. 交付：项目名与时间轴、成片路径、QA 前后对比、本次未能实现或需人工确认的部分（如未试听、抠像边缘）。用户需要剪映工程时用 `export format="jianying"`。

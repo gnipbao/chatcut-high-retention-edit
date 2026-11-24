@@ -72,18 +72,26 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("video")
     ap.add_argument("--out", default=None)
-    ap.add_argument("--scene", type=float, default=0.06)
-    ap.add_argument("--fade-scene", type=float, default=0.10,
-                    help="渐变转场（淡入淡出、黑场字卡）检测阈值，按 5fps 抽样；0 关闭")
+    ap.add_argument("--scene", type=float, default=None,
+                    help="硬切/构图跳变检测阈值，默认按 profile（bright/cinematic=0.06，sticker=0.018）")
+    ap.add_argument("--fade-scene", type=float, default=None,
+                    help="渐变转场或贴纸微节拍（5fps 抽样）检测阈值，默认按 profile（bright/cinematic=0.10，sticker=0.016）；0 关闭")
     ap.add_argument("--static", type=float, default=None, help="静态段告警阈值（秒），默认按 profile")
-    ap.add_argument("--profile", choices=["bright", "cinematic"], default="bright",
-                    help="bright：默认高网感快节奏；cinematic：暗调文案风等慢节奏电影感主题")
+    ap.add_argument("--profile", choices=["bright", "cinematic", "sticker"], default="bright",
+                    help="bright：默认高网感快节奏；cinematic：暗调文案风等慢节奏电影感；sticker：贴纸抠像风（捕捉贴纸微节拍）")
     ap.add_argument("--exempt", default="", help="豁免区间（秒），如 23-28.5,54.7-60.8：示意图/演示定格段不计入静态段")
     a = ap.parse_args()
-    P = {"bright": dict(static=4.0, avg=3.5, longest=6.0, ratio=0.15, hook=2),
-         "cinematic": dict(static=6.0, avg=4.5, longest=12.0, ratio=0.40, hook=1)}[a.profile]
+    P = {
+        "bright": dict(static=4.0, avg=3.5, longest=6.0, ratio=0.15, hook=2, scene=0.06, fade_scene=0.10),
+        "cinematic": dict(static=6.0, avg=4.5, longest=12.0, ratio=0.40, hook=1, scene=0.06, fade_scene=0.10),
+        "sticker": dict(static=5.0, avg=3.5, longest=9.0, ratio=0.25, hook=1, scene=0.018, fade_scene=0.016),
+    }[a.profile]
     if a.static is None:
         a.static = P["static"]
+    if a.scene is None:
+        a.scene = P["scene"]
+    if a.fade_scene is None:
+        a.fade_scene = P["fade_scene"]
     out = a.out or os.path.splitext(a.video)[0] + "_qa"
     os.makedirs(out, exist_ok=True)
 
